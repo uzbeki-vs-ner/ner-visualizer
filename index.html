@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NER Visualizer - Uzbek Entity Recognition</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔍 NER Visualizer</h1>
+            <p class="subtitle">Named Entity Recognition for Uzbek Texts</p>
+        </header>
+
+        <div class="controls">
+            <button id="healthcheck-btn" class="btn btn-secondary">
+                <span class="btn-icon">💓</span>
+                Healthcheck
+            </button>
+            <div id="health-status" class="health-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Not checked</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2>Input Text</h2>
+                <textarea 
+                    id="input-text" 
+                    class="text-area" 
+                    placeholder="Type or paste text here... (e.g., Ali Toshkent shahrida ishlaydi.)"
+                    rows="6"
+                ></textarea>
+                <button id="analyze-btn" class="btn btn-primary">
+                    <span class="btn-icon">🔎</span>
+                    Search for entities
+                </button>
+            </div>
+
+            <div class="output-section">
+                <h2>Result</h2>
+                <div id="output-container" class="output-container">
+                    <div id="output-text" class="output-text">
+                        <span class="placeholder">Results will appear here...</span>
+                    </div>
+                </div>
+                
+                <div id="legend" class="legend hidden">
+                    <h3>Entity Legend</h3>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <span class="legend-color org-color"></span>
+                            <span class="legend-label">ORG - Organization</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color name-color"></span>
+                            <span class="legend-label">NAME - Person Name</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color geo-color"></span>
+                            <span class="legend-label">GEO - Geographic Location</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="entity-list" class="entity-list hidden">
+                    <h3>Detected Entities</h3>
+                    <table class="entity-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Text</th>
+                                <th>Start</th>
+                                <th>End</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entity-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-message" class="error-message hidden"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

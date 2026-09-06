@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  ner-api:
+    image: ner-uz-solution:latest
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - ner-network
+
+  ner-visualizer:
+    build: .
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - ner-api
+    networks:
+      - ner-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  ner-network:
+    driver: bridge
