@@ -1,11 +1,22 @@
-// API Configuration - Using relative URLs for NGINX proxy
-const PREDICT_ENDPOINT = '/api/v1/predict';
-const HEALTH_ENDPOINT = '/healthz';
+// API Configuration
+// Try to get API URL from environment or use default
+const API_BASE_URL = window.NER_API_URL || getApiBaseUrl();
+const PREDICT_ENDPOINT = `${API_BASE_URL}/api/v1/predict`;
+const HEALTH_ENDPOINT = `${API_BASE_URL}/healthz`;
 
-// For debugging
-console.log('Using NGINX proxy with relative URLs');
-console.log(`Predict endpoint: ${PREDICT_ENDPOINT}`);
-console.log(`Health endpoint: ${HEALTH_ENDPOINT}`);
+// Function to determine API base URL
+function getApiBaseUrl() {
+    // Check if we're running in Docker (hostname is different)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Running locally, API is on localhost:8000
+        return 'http://localhost:8000';
+    } else {
+        // Running in Docker, try to use same host
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        return `${protocol}//${hostname}:8000`;
+    }
+}
 
 // Entity type configurations
 const ENTITY_TYPES = {
@@ -67,81 +78,41 @@ async function analyzeText() {
     hideError();
     
     try {
-        // Prepare request payload following the API contract
+        // Prepare request payload
         const requestData = [{
             hash: generateHash(),
             text: text
         }];
         
-        console.log('Request payload:', requestData);
-        console.log('Sending request to:', PREDICT_ENDPOINT);
+        console.log(`Sending request to: ${PREDICT_ENDPOINT}`);
         
-        // Call API through NGINX proxy with correct headers
+        // Call API
         const response = await fetch(PREDICT_ENDPOINT, {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json; charset=utf-8'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(requestData)
         });
         
-        console.log('Response status:', response.status);
-        console.log('Response content-type:', response.headers.get('content-type'));
-        
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error(`API returned status ${response.status}: ${errorText}`);
-        }
-        
-        // Verify content type
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error(`Expected application/json, got ${contentType}`);
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.detail || `API returned status ${response.status}`);
         }
         
         const result = await response.json();
-        console.log('Response data:', result);
-        
-        // Validate response structure according to contract
-        if (!result || typeof result !== 'object' || !Array.isArray(result.data)) {
-            throw new Error('Invalid response format: expected object with data[]');
-        }
-        
-        // Find our result (should be the only one)
-        const ourResult = result.data.find(item => item.hash === requestData[0].hash);
-        
-        if (!ourResult) {
-            throw new Error('Response does not contain our hash');
-        }
-        
-        if (!Array.isArray(ourResult.entities)) {
-            throw new Error('Invalid response: entities must be an array');
-        }
-        
-        // Validate each entity
-        const validEntities = ourResult.entities.filter(entity => {
-            return (
-                entity &&
-                typeof entity === 'object' &&
-                ['ORG', 'NAME', 'GEO'].includes(entity.label) &&
-                Number.isInteger(entity.start) &&
-                Number.isInteger(entity.end) &&
-                entity.start >= 0 &&
-                entity.start < entity.end &&
-                entity.end <= text.length
-            );
-        });
-        
-        console.log('Valid entities:', validEntities);
         
         // Process and display results
-        displayResults(text, validEntities);
+        if (result.data && result.data.length > 0) {
+            displayResults(text, result.data[0].entities);
+        } else {
+            displayResults(text, []);
+        }
         
     } catch (error) {
         console.error('Analysis error:', error);
-        showError(`Error during analysis: ${error.message}`);
+        showError(`Error during analysis: ${error.message}. Make sure the NER API is running.`);
         outputText.innerHTML = '<span class="placeholder">Analysis failed. Please try again.</span>';
         entityList.classList.add('hidden');
         legend.classList.add('hidden');
@@ -179,7 +150,7 @@ function displayResults(originalText, entities) {
             label: entity.label
         };
         
-        highlightedText += `<span class="${entityConfig.className}" title="${entityConfig.label} - [${entity.start}, ${entity.end})" data-entity-index="${index}">${entityText}</span>`;
+        highlightedText += `<span class="${entityConfig.className}" title="${entityConfig.label}" data-entity-index="${index}">${entityText}</span>`;
         
         lastIndex = entity.end;
     });
@@ -196,8 +167,7 @@ function displayResults(originalText, entities) {
             const index = parseInt(span.dataset.entityIndex);
             const entity = sortedEntities[index];
             const entityText = originalText.substring(entity.start, entity.end);
-            const entityLabel = ENTITY_TYPES[entity.label]?.label || entity.label;
-            alert(`Entity: "${entityText}"\nType: ${entity.label} (${entityLabel})\nPosition: [${entity.start}, ${entity.end})`);
+            alert(`Entity: ${entityText}\nType: ${entity.label} (${ENTITY_TYPES[entity.label].label})\nPosition: [${entity.start}, ${entity.end})`);
         });
     });
     
@@ -256,34 +226,21 @@ async function performHealthcheck() {
     updateHealthStatus('loading', 'Checking health...');
     
     try {
-        console.log('Checking health at:', HEALTH_ENDPOINT);
+        console.log(`Checking health at: ${HEALTH_ENDPOINT}`);
         
         const response = await fetch(HEALTH_ENDPOINT, {
-            method: 'GET',
             headers: {
                 'Accept': 'application/json'
             }
         });
         
-        console.log('Health response status:', response.status);
-        console.log('Health response content-type:', response.headers.get('content-type'));
+        const data = await response.json().catch(() => null);
         
-        // Verify content type
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error(`Expected application/json, got ${contentType}`);
-        }
-        
-        const data = await response.json();
-        console.log('Health response data:', data);
-        
-        // Validate response according to contract
-        if (response.ok && data && data.status === 'ok') {
+        if (response.ok && data?.status === 'ok') {
             updateHealthStatus('healthy', 'Service is healthy');
-            console.log('Healthcheck passed: {"status":"ok"}');
+            console.log('Healthcheck response:', data);
         } else {
             updateHealthStatus('unhealthy', `Service unhealthy (${response.status})`);
-            console.error('Healthcheck failed:', data);
         }
     } catch (error) {
         console.error('Healthcheck error:', error);
@@ -361,8 +318,7 @@ function initializeSample() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeSample();
     console.log('NER Visualizer initialized');
-    console.log('Using NGINX proxy for API requests');
+    console.log(`API Base URL: ${API_BASE_URL}`);
     console.log(`Predict endpoint: ${PREDICT_ENDPOINT}`);
     console.log(`Health endpoint: ${HEALTH_ENDPOINT}`);
-    console.log('Following HTTP API contract');
 });
