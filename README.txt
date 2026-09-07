@@ -1,24 +1,15 @@
-# NER Visualizer (Dockerized)
+# Uzbek NER: API
 
-A lightweight, single-page web application for visualizing Named Entity Recognition results from the NER service API, packaged as a Docker container.
-
-## Features
-
-- **Text Input**: Enter or paste text for entity recognition
-- **Entity Highlighting**: Entities are highlighted in different colors based on type:
-  - 🟡 **ORG** - Organizations (yellow)
-  - 🔵 **NAME** - Person names (blue)
-  - 🟢 **GEO** - Geographic locations (green)
-- **Entity Table**: Detailed list of all detected entities with positions
-- **Health Check**: Button to check API service health
-- **Interactive**: Click on highlighted entities to see details
-- **Responsive Design**: Works on desktop and mobile devices
-- **Dockerized**: Runs as a lightweight Nginx container
-
-## Quick Start
-
-### Option 1: Using Docker Compose (Recommended)
-
-1. **Make sure the NER API image exists**:
-   ```bash
-   docker images | grep ner-uz-solution
+## Запуск
+0. Иметь запущенный API на устройстве
+1. Склонировать репозиторий, например:
+```
+git clone https://github.com/uzbeki-vs-ner/ner-visualizer.git
+cd ner-visualizer
+```
+2. Собрать контейнер и запустить его (`--gpus all` опционально, если есть GPU):
+```
+docker build -t ner-visualizer .
+docker run --rm -p 8080:80 ner-visualizer
+```
+3. Смотреть на красивое по адресу `localhost:8080`
