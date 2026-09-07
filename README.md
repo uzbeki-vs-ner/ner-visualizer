@@ -7,7 +7,7 @@
 git clone https://github.com/uzbeki-vs-ner/ner-visualizer.git
 cd ner-visualizer
 ```
-2. Собрать контейнер и запустить его (`--gpus all` опционально, если есть GPU):
+2. Собрать контейнер и запустить его:
 ```
 docker build -t ner-visualizer .
 docker run --rm -p 8080:80 ner-visualizer
